@@ -29,6 +29,7 @@ bl_info = {
 import bpy
 from mathutils import Vector
 from math import cos, sin, pi
+from rna_prop_ui import rna_idprop_ui_prop_get
 
 def create_corner_shape(name, reverse=False):
     mesh = bpy.data.meshes.new('WGT-'+name)
@@ -84,7 +85,6 @@ class Create2DCameraRig(bpy.types.Operator):
         camera = bpy.data.cameras.new(CAMERA_NAME)
         camera.lens = 170.0
         camera_obj = bpy.data.objects.new(CAMERA_NAME, camera)
-        # camera_obj.hide_select = True
         sc.objects.link(camera_obj)
 
         # Create armature
@@ -92,6 +92,7 @@ class Create2DCameraRig(bpy.types.Operator):
         camera_rig_object = bpy.data.objects.new('Camera Rig', camera_rig)
         sc.objects.link(camera_rig_object)
         camera_rig_object.location = sc.cursor_location
+        camera_rig_object.use_extra_recalc_data = True
 
         sc.objects.active = camera_rig_object
 
@@ -116,15 +117,15 @@ class Create2DCameraRig(bpy.types.Operator):
         right_corner.tail = right_corner.head + Vector((0.0, 0.0, BONE_LENGTH))
         right_corner.parent = parent_bone
 
-        corner_distance = (left_corner.head - right_corner.head).length
+        corner_distance_x = (left_corner.head - right_corner.head).length
+        corner_distance_y = -left_corner.head.z
+        corner_distance_z = left_corner.head.y
 
         center = eb.new(CENTER_NAME)
         center.head = ((right_corner.head + left_corner.head) / 2.0)
         center.tail = center.head + Vector((0.0, 0.0, BONE_LENGTH))
         center.parent = parent_bone
-        # center.layers = [l==31 for l in range(32)]
-
-        # sc.cursor_location = camera_obj.matrix_world * (camera.view_frame(sc)[1].normalized() * 10)
+        center.layers = [l==31 for l in range(32)]
 
         bpy.ops.object.mode_set(mode='POSE')
         bones = camera_rig_object.data.bones
@@ -143,7 +144,7 @@ class Create2DCameraRig(bpy.types.Operator):
         var.targets[0].id = camera_rig_object
         var.targets[0].bone_target = LEFT_CORNER_NAME
         var.targets[0].transform_type = 'LOC_X'
-        var.targets[0].transform_space = 'TRANSFORM_SPACE'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
 
         var = d.variables.new()
         var.name = 'right'
@@ -151,30 +152,45 @@ class Create2DCameraRig(bpy.types.Operator):
         var.targets[0].id = camera_rig_object
         var.targets[0].bone_target = RIGHT_CORNER_NAME
         var.targets[0].transform_type = 'LOC_X'
-        var.targets[0].transform_space = 'TRANSFORM_SPACE'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
 
         # Center Y driver
         d = center_drivers[1].driver
         d.type = 'SCRIPTED'
-        # d.expression = '(res_y/res_x)*dist/2 + (left + right)/2'
 
-        d.expression = '({distance} - (left-right))*(res_y/res_x)/2'.format(distance=corner_distance)
+        d.expression = '({distance_x} - (left_x-right_x))*(res_y/res_x)/2 + (left_y + right_y)/2'.format(distance_x=corner_distance_x)
 
         var = d.variables.new()
-        var.name = 'left'
+        var.name = 'left_x'
         var.type = 'TRANSFORMS'
         var.targets[0].id = camera_rig_object
         var.targets[0].bone_target = LEFT_CORNER_NAME
         var.targets[0].transform_type = 'LOC_X'
-        var.targets[0].transform_space = 'TRANSFORM_SPACE'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
 
         var = d.variables.new()
-        var.name = 'right'
+        var.name = 'right_x'
         var.type = 'TRANSFORMS'
         var.targets[0].id = camera_rig_object
         var.targets[0].bone_target = RIGHT_CORNER_NAME
         var.targets[0].transform_type = 'LOC_X'
-        var.targets[0].transform_space = 'TRANSFORM_SPACE'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
+
+        var = d.variables.new()
+        var.name = 'left_y'
+        var.type = 'TRANSFORMS'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].bone_target = LEFT_CORNER_NAME
+        var.targets[0].transform_type = 'LOC_Y'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
+
+        var = d.variables.new()
+        var.name = 'right_y'
+        var.type = 'TRANSFORMS'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].bone_target = RIGHT_CORNER_NAME
+        var.targets[0].transform_type = 'LOC_Y'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
 
         var = d.variables.new()
         var.name = 'res_x'
@@ -200,7 +216,7 @@ class Create2DCameraRig(bpy.types.Operator):
         var.targets[0].id = camera_rig_object
         var.targets[0].bone_target = LEFT_CORNER_NAME
         var.targets[0].transform_type = 'LOC_Z'
-        var.targets[0].transform_space = 'TRANSFORM_SPACE'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
 
         var = d.variables.new()
         var.name = 'right'
@@ -208,7 +224,7 @@ class Create2DCameraRig(bpy.types.Operator):
         var.targets[0].id = camera_rig_object
         var.targets[0].bone_target = RIGHT_CORNER_NAME
         var.targets[0].transform_type = 'LOC_Z'
-        var.targets[0].transform_space = 'TRANSFORM_SPACE'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
 
         # Bone constraints
         con = pb[CAMERA_NAME].constraints.new('DAMPED_TRACK')
@@ -250,11 +266,32 @@ class Create2DCameraRig(bpy.types.Operator):
         pb[CAMERA_NAME].lock_scale = (True,) * 3
 
         # Camera settings
-        d = camera.driver_add('lens').driver
-        d.expression = 'camera_distance *32 / frame_distance'
+        camera_rig_object['rotation_shift'] = 0.0
+        prop = rna_idprop_ui_prop_get(camera_rig_object, 'rotation_shift', create=True)
+
+        prop["min"] = 0.0
+        prop["max"] = 1.0
+        prop["soft_min"] = 0.0
+        prop["soft_max"] = 1.0
+        prop["description"] = 'rotation_shift'
+
+        # Rotation / shift switch
+        d = con.driver_add('influence').driver
+        d.expression = '1 - rotation_shift'
 
         var = d.variables.new()
-        var.name = 'frame_distance'
+        var.name = 'rotation_shift'
+        var.type = 'SINGLE_PROP'
+        var.targets[0].id_type = 'OBJECT'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].data_path = '["rotation_shift"]'
+
+        # Focal length driver
+        d = camera.driver_add('lens').driver
+        d.expression = 'abs({distance_z} - (left_z + right_z)/2) * 32 / frame_width'.format(distance_z=corner_distance_z)
+
+        var = d.variables.new()
+        var.name = 'frame_width'
         var.type = 'LOC_DIFF'
         var.targets[0].id = camera_rig_object
         var.targets[0].bone_target = LEFT_CORNER_NAME
@@ -264,16 +301,168 @@ class Create2DCameraRig(bpy.types.Operator):
         var.targets[1].transform_space = 'WORLD_SPACE'
 
         var = d.variables.new()
-        var.name = 'camera_distance'
-        var.type = 'LOC_DIFF'
+        var.name = 'left_z'
+        var.type = 'TRANSFORMS'
         var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = CENTER_NAME
-        var.targets[0].transform_space = 'WORLD_SPACE'
-        var.targets[1].id = camera_rig_object
-        var.targets[1].bone_target = CAMERA_NAME
-        var.targets[1].transform_space = 'WORLD_SPACE'
+        var.targets[0].bone_target = LEFT_CORNER_NAME
+        var.targets[0].transform_type = 'LOC_Z'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
 
+        var = d.variables.new()
+        var.name = 'right_z'
+        var.type = 'TRANSFORMS'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].bone_target = RIGHT_CORNER_NAME
+        var.targets[0].transform_type = 'LOC_Z'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
 
+        # Shift driver X
+        d = camera.driver_add('shift_x').driver
+
+        d.expression = 'rotation_shift * (((left_x + right_x)/2 - cam_x) * lens / abs({distance_z} - (left_z + right_z)/2) / sensor_width)'.format(distance_z=corner_distance_z)
+
+        var = d.variables.new()
+        var.name = 'rotation_shift'
+        var.type = 'SINGLE_PROP'
+        var.targets[0].id_type = 'OBJECT'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].data_path = '["rotation_shift"]'
+
+        var = d.variables.new()
+        var.name = 'left_x'
+        var.type = 'TRANSFORMS'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].bone_target = LEFT_CORNER_NAME
+        var.targets[0].transform_type = 'LOC_X'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
+
+        var = d.variables.new()
+        var.name = 'right_x'
+        var.type = 'TRANSFORMS'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].bone_target = RIGHT_CORNER_NAME
+        var.targets[0].transform_type = 'LOC_X'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
+
+        var = d.variables.new()
+        var.name = 'left_z'
+        var.type = 'TRANSFORMS'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].bone_target = LEFT_CORNER_NAME
+        var.targets[0].transform_type = 'LOC_Z'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
+
+        var = d.variables.new()
+        var.name = 'right_z'
+        var.type = 'TRANSFORMS'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].bone_target = RIGHT_CORNER_NAME
+        var.targets[0].transform_type = 'LOC_Z'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
+
+        var = d.variables.new()
+        var.name = 'cam_x'
+        var.type = 'TRANSFORMS'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].bone_target = CAMERA_NAME
+        var.targets[0].transform_type = 'LOC_X'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
+
+        var = d.variables.new()
+        var.name = 'lens'
+        var.type = 'SINGLE_PROP'
+        var.targets[0].id_type = 'CAMERA'
+        var.targets[0].id = camera
+        var.targets[0].data_path = 'lens'
+
+        var = d.variables.new()
+        var.name = 'sensor_width'
+        var.type = 'SINGLE_PROP'
+        var.targets[0].id_type = 'CAMERA'
+        var.targets[0].id = camera
+        var.targets[0].data_path = 'sensor_width'
+
+        # Shift driver Y
+        d = camera.driver_add('shift_y').driver
+
+        d.expression = 'rotation_shift * -(({distance_y} - (left_y + right_y)/2 - cam_y) * lens / abs({distance_z} - (left_z + right_z)/2) / sensor_width - (res_y/res_x)/2)'.format(distance_y=corner_distance_y, distance_z=corner_distance_z)
+
+        var = d.variables.new()
+        var.name = 'rotation_shift'
+        var.type = 'SINGLE_PROP'
+        var.targets[0].id_type = 'OBJECT'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].data_path = '["rotation_shift"]'
+
+        var = d.variables.new()
+        var.name = 'left_y'
+        var.type = 'TRANSFORMS'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].bone_target = LEFT_CORNER_NAME
+        var.targets[0].transform_type = 'LOC_Y'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
+
+        var = d.variables.new()
+        var.name = 'right_y'
+        var.type = 'TRANSFORMS'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].bone_target = RIGHT_CORNER_NAME
+        var.targets[0].transform_type = 'LOC_Y'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
+
+        var = d.variables.new()
+        var.name = 'left_z'
+        var.type = 'TRANSFORMS'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].bone_target = LEFT_CORNER_NAME
+        var.targets[0].transform_type = 'LOC_Z'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
+
+        var = d.variables.new()
+        var.name = 'right_z'
+        var.type = 'TRANSFORMS'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].bone_target = RIGHT_CORNER_NAME
+        var.targets[0].transform_type = 'LOC_Z'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
+
+        var = d.variables.new()
+        var.name = 'cam_y'
+        var.type = 'TRANSFORMS'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].bone_target = CAMERA_NAME
+        var.targets[0].transform_type = 'LOC_Y'
+        var.targets[0].transform_space = 'LOCAL_SPACE'
+
+        var = d.variables.new()
+        var.name = 'res_x'
+        var.type = 'SINGLE_PROP'
+        var.targets[0].id_type = 'SCENE'
+        var.targets[0].id = sc
+        var.targets[0].data_path = 'render.resolution_x'
+
+        var = d.variables.new()
+        var.name = 'res_y'
+        var.type = 'SINGLE_PROP'
+        var.targets[0].id_type = 'SCENE'
+        var.targets[0].id = sc
+        var.targets[0].data_path = 'render.resolution_y'
+
+        var = d.variables.new()
+        var.name = 'lens'
+        var.type = 'SINGLE_PROP'
+        var.targets[0].id_type = 'CAMERA'
+        var.targets[0].id = camera
+        var.targets[0].data_path = 'lens'
+
+        var = d.variables.new()
+        var.name = 'sensor_width'
+        var.type = 'SINGLE_PROP'
+        var.targets[0].id_type = 'CAMERA'
+        var.targets[0].id = camera
+        var.targets[0].data_path = 'sensor_width'
+
+        # Parent camera object to rig
         camera_obj.parent = camera_rig_object
         camera_obj.parent_type = 'BONE'
         camera_obj.parent_bone = 'Camera'
@@ -284,7 +473,7 @@ class Create2DCameraRig(bpy.types.Operator):
         return {"FINISHED"}
 
 
-# add entry in the Add Object > Camera Menu
+# Add entry in the Add Object > Camera Menu
 def add_2d_rig_buttons(self, context):
     if context.mode == 'OBJECT':
         self.layout.operator(
