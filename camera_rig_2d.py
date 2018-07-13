@@ -125,7 +125,7 @@ class Create2DCameraRig(bpy.types.Operator):
         center.head = ((right_corner.head + left_corner.head) / 2.0)
         center.tail = center.head + Vector((0.0, 0.0, BONE_LENGTH))
         center.parent = parent_bone
-        center.layers = [l==31 for l in range(32)]
+        center.layers = [layer == 31 for layer in range(32)]
 
         bpy.ops.object.mode_set(mode='POSE')
         bones = camera_rig_object.data.bones
@@ -138,21 +138,14 @@ class Create2DCameraRig(bpy.types.Operator):
         d = center_drivers[0].driver
         d.type = 'AVERAGE'
 
-        var = d.variables.new()
-        var.name = 'left'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = LEFT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_X'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
-
-        var = d.variables.new()
-        var.name = 'right'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = RIGHT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_X'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
+        for corner in ('left', 'right'):
+            var = d.variables.new()
+            var.name = corner
+            var.type = 'TRANSFORMS'
+            var.targets[0].id = camera_rig_object
+            var.targets[0].bone_target = corner.capitalize() + ' Corner'
+            var.targets[0].transform_type = 'LOC_X'
+            var.targets[0].transform_space = 'LOCAL_SPACE'
 
         # Center Y driver
         d = center_drivers[1].driver
@@ -160,71 +153,35 @@ class Create2DCameraRig(bpy.types.Operator):
 
         d.expression = '({distance_x} - (left_x-right_x))*(res_y/res_x)/2 + (left_y + right_y)/2'.format(distance_x=corner_distance_x)
 
-        var = d.variables.new()
-        var.name = 'left_x'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = LEFT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_X'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
+        for direction in ('x', 'y'):
+            for corner in ('left', 'right'):
+                var = d.variables.new()
+                var.name = '%s_%s' % (corner, direction)
+                var.type = 'TRANSFORMS'
+                var.targets[0].id = camera_rig_object
+                var.targets[0].bone_target = corner.capitalize() + ' Corner'
+                var.targets[0].transform_type = 'LOC_' + direction.upper()
+                var.targets[0].transform_space = 'LOCAL_SPACE'
 
-        var = d.variables.new()
-        var.name = 'right_x'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = RIGHT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_X'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
-
-        var = d.variables.new()
-        var.name = 'left_y'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = LEFT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_Y'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
-
-        var = d.variables.new()
-        var.name = 'right_y'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = RIGHT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_Y'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
-
-        var = d.variables.new()
-        var.name = 'res_x'
-        var.type = 'SINGLE_PROP'
-        var.targets[0].id_type = 'SCENE'
-        var.targets[0].id = sc
-        var.targets[0].data_path = 'render.resolution_x'
-
-        var = d.variables.new()
-        var.name = 'res_y'
-        var.type = 'SINGLE_PROP'
-        var.targets[0].id_type = 'SCENE'
-        var.targets[0].id = sc
-        var.targets[0].data_path = 'render.resolution_y'
+            var = d.variables.new()
+            var.name = 'res_' + direction
+            var.type = 'SINGLE_PROP'
+            var.targets[0].id_type = 'SCENE'
+            var.targets[0].id = sc
+            var.targets[0].data_path = 'render.resolution_' + direction
 
         # Center Z driver
         d = center_drivers[2].driver
         d.type = 'AVERAGE'
 
-        var = d.variables.new()
-        var.name = 'left'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = LEFT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_Z'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
-
-        var = d.variables.new()
-        var.name = 'right'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = RIGHT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_Z'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
+        for corner in ('left', 'right'):
+            var = d.variables.new()
+            var.name = corner
+            var.type = 'TRANSFORMS'
+            var.targets[0].id = camera_rig_object
+            var.targets[0].bone_target = corner.capitalize() + ' Corner'
+            var.targets[0].transform_type = 'LOC_Z'
+            var.targets[0].transform_space = 'LOCAL_SPACE'
 
         # Bone constraints
         con = pb[CAMERA_NAME].constraints.new('DAMPED_TRACK')
@@ -300,21 +257,14 @@ class Create2DCameraRig(bpy.types.Operator):
         var.targets[1].bone_target = RIGHT_CORNER_NAME
         var.targets[1].transform_space = 'WORLD_SPACE'
 
-        var = d.variables.new()
-        var.name = 'left_z'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = LEFT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_Z'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
-
-        var = d.variables.new()
-        var.name = 'right_z'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = RIGHT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_Z'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
+        for corner in ('left', 'right'):
+            var = d.variables.new()
+            var.name = corner + '_z'
+            var.type = 'TRANSFORMS'
+            var.targets[0].id = camera_rig_object
+            var.targets[0].bone_target = corner.capitalize() + ' Corner'
+            var.targets[0].transform_type = 'LOC_Z'
+            var.targets[0].transform_space = 'LOCAL_SPACE'
 
         # Shift driver X
         d = camera.driver_add('shift_x').driver
@@ -328,37 +278,15 @@ class Create2DCameraRig(bpy.types.Operator):
         var.targets[0].id = camera_rig_object
         var.targets[0].data_path = '["rotation_shift"]'
 
-        var = d.variables.new()
-        var.name = 'left_x'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = LEFT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_X'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
-
-        var = d.variables.new()
-        var.name = 'right_x'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = RIGHT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_X'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
-
-        var = d.variables.new()
-        var.name = 'left_z'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = LEFT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_Z'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
-
-        var = d.variables.new()
-        var.name = 'right_z'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = RIGHT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_Z'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
+        for direction in ('x', 'z'):
+            for corner in ('left', 'right'):
+                var = d.variables.new()
+                var.name = '%s_%s' % (corner, direction)
+                var.type = 'TRANSFORMS'
+                var.targets[0].id = camera_rig_object
+                var.targets[0].bone_target = corner.capitalize() + ' Corner'
+                var.targets[0].transform_type = 'LOC_' + direction.upper()
+                var.targets[0].transform_space = 'LOCAL_SPACE'
 
         var = d.variables.new()
         var.name = 'cam_x'
@@ -394,37 +322,23 @@ class Create2DCameraRig(bpy.types.Operator):
         var.targets[0].id = camera_rig_object
         var.targets[0].data_path = '["rotation_shift"]'
 
-        var = d.variables.new()
-        var.name = 'left_y'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = LEFT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_Y'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
+        for direction in ('y', 'z'):
+            for corner in ('left', 'right'):
+                var = d.variables.new()
+                var.name = '%s_%s' % (corner, direction)
+                var.type = 'TRANSFORMS'
+                var.targets[0].id = camera_rig_object
+                var.targets[0].bone_target = corner.capitalize() + ' Corner'
+                var.targets[0].transform_type = 'LOC_' + direction.upper()
+                var.targets[0].transform_space = 'LOCAL_SPACE'
 
-        var = d.variables.new()
-        var.name = 'right_y'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = RIGHT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_Y'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
-
-        var = d.variables.new()
-        var.name = 'left_z'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = LEFT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_Z'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
-
-        var = d.variables.new()
-        var.name = 'right_z'
-        var.type = 'TRANSFORMS'
-        var.targets[0].id = camera_rig_object
-        var.targets[0].bone_target = RIGHT_CORNER_NAME
-        var.targets[0].transform_type = 'LOC_Z'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
+        for direction in ('x', 'y'):
+            var = d.variables.new()
+            var.name = 'res_' + direction
+            var.type = 'SINGLE_PROP'
+            var.targets[0].id_type = 'SCENE'
+            var.targets[0].id = sc
+            var.targets[0].data_path = 'render.resolution_' + direction
 
         var = d.variables.new()
         var.name = 'cam_y'
@@ -433,20 +347,6 @@ class Create2DCameraRig(bpy.types.Operator):
         var.targets[0].bone_target = CAMERA_NAME
         var.targets[0].transform_type = 'LOC_Y'
         var.targets[0].transform_space = 'LOCAL_SPACE'
-
-        var = d.variables.new()
-        var.name = 'res_x'
-        var.type = 'SINGLE_PROP'
-        var.targets[0].id_type = 'SCENE'
-        var.targets[0].id = sc
-        var.targets[0].data_path = 'render.resolution_x'
-
-        var = d.variables.new()
-        var.name = 'res_y'
-        var.type = 'SINGLE_PROP'
-        var.targets[0].id_type = 'SCENE'
-        var.targets[0].id = sc
-        var.targets[0].data_path = 'render.resolution_y'
 
         var = d.variables.new()
         var.name = 'lens'
@@ -467,6 +367,9 @@ class Create2DCameraRig(bpy.types.Operator):
         camera_obj.parent_type = 'BONE'
         camera_obj.parent_bone = 'Camera'
         camera_obj.location.y = -BONE_LENGTH
+        camera_obj.lock_location = (True,) * 3
+        camera_obj.lock_rotation = (True,) * 3
+        camera_obj.lock_scale = (True,) * 3
 
         bpy.ops.object.mode_set(mode=mode)
 
