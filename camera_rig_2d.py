@@ -266,6 +266,20 @@ class Create2DCameraRig(bpy.types.Operator):
             var.targets[0].transform_type = 'LOC_Z'
             var.targets[0].transform_space = 'LOCAL_SPACE'
 
+        # Orthographic scale driver
+        d = camera.driver_add('ortho_scale').driver
+        d.expression = 'abs({distance_x} - (left_x - right_x))'.format(distance_x=corner_distance_x)
+
+        for corner in ('left', 'right'):
+            var = d.variables.new()
+            var.name = corner + '_x'
+            var.type = 'TRANSFORMS'
+            var.targets[0].id = camera_rig_object
+            var.targets[0].bone_target = corner.capitalize() + ' Corner'
+            var.targets[0].transform_type = 'LOC_X'
+            var.targets[0].transform_space = 'LOCAL_SPACE'
+
+
         # Shift driver X
         d = camera.driver_add('shift_x').driver
 
