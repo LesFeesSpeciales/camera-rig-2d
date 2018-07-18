@@ -92,7 +92,6 @@ class Create2DCameraRig(bpy.types.Operator):
         camera_rig_object = bpy.data.objects.new('Camera Rig', camera_rig)
         sc.objects.link(camera_rig_object)
         camera_rig_object.location = sc.cursor_location
-        camera_rig_object.use_extra_recalc_data = True
 
         sc.objects.active = camera_rig_object
 
@@ -145,7 +144,7 @@ class Create2DCameraRig(bpy.types.Operator):
             var.targets[0].id = camera_rig_object
             var.targets[0].bone_target = corner.capitalize() + ' Corner'
             var.targets[0].transform_type = 'LOC_X'
-            var.targets[0].transform_space = 'LOCAL_SPACE'
+            var.targets[0].transform_space = 'TRANSFORM_SPACE'
 
         # Center Y driver
         d = center_drivers[1].driver
@@ -161,7 +160,7 @@ class Create2DCameraRig(bpy.types.Operator):
                 var.targets[0].id = camera_rig_object
                 var.targets[0].bone_target = corner.capitalize() + ' Corner'
                 var.targets[0].transform_type = 'LOC_' + direction.upper()
-                var.targets[0].transform_space = 'LOCAL_SPACE'
+                var.targets[0].transform_space = 'TRANSFORM_SPACE'
 
             var = d.variables.new()
             var.name = 'res_' + direction
@@ -181,7 +180,7 @@ class Create2DCameraRig(bpy.types.Operator):
             var.targets[0].id = camera_rig_object
             var.targets[0].bone_target = corner.capitalize() + ' Corner'
             var.targets[0].transform_type = 'LOC_Z'
-            var.targets[0].transform_space = 'LOCAL_SPACE'
+            var.targets[0].transform_space = 'TRANSFORM_SPACE'
 
         # Bone constraints
         con = pb[CAMERA_NAME].constraints.new('DAMPED_TRACK')
@@ -264,7 +263,7 @@ class Create2DCameraRig(bpy.types.Operator):
             var.targets[0].id = camera_rig_object
             var.targets[0].bone_target = corner.capitalize() + ' Corner'
             var.targets[0].transform_type = 'LOC_Z'
-            var.targets[0].transform_space = 'LOCAL_SPACE'
+            var.targets[0].transform_space = 'TRANSFORM_SPACE'
 
         # Orthographic scale driver
         d = camera.driver_add('ortho_scale').driver
@@ -277,7 +276,7 @@ class Create2DCameraRig(bpy.types.Operator):
             var.targets[0].id = camera_rig_object
             var.targets[0].bone_target = corner.capitalize() + ' Corner'
             var.targets[0].transform_type = 'LOC_X'
-            var.targets[0].transform_space = 'LOCAL_SPACE'
+            var.targets[0].transform_space = 'TRANSFORM_SPACE'
 
 
         # Shift driver X
@@ -300,7 +299,7 @@ class Create2DCameraRig(bpy.types.Operator):
                 var.targets[0].id = camera_rig_object
                 var.targets[0].bone_target = corner.capitalize() + ' Corner'
                 var.targets[0].transform_type = 'LOC_' + direction.upper()
-                var.targets[0].transform_space = 'LOCAL_SPACE'
+                var.targets[0].transform_space = 'TRANSFORM_SPACE'
 
         var = d.variables.new()
         var.name = 'cam_x'
@@ -308,7 +307,7 @@ class Create2DCameraRig(bpy.types.Operator):
         var.targets[0].id = camera_rig_object
         var.targets[0].bone_target = CAMERA_NAME
         var.targets[0].transform_type = 'LOC_X'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
+        var.targets[0].transform_space = 'TRANSFORM_SPACE'
 
         var = d.variables.new()
         var.name = 'lens'
@@ -344,7 +343,7 @@ class Create2DCameraRig(bpy.types.Operator):
                 var.targets[0].id = camera_rig_object
                 var.targets[0].bone_target = corner.capitalize() + ' Corner'
                 var.targets[0].transform_type = 'LOC_' + direction.upper()
-                var.targets[0].transform_space = 'LOCAL_SPACE'
+                var.targets[0].transform_space = 'TRANSFORM_SPACE'
 
         for direction in ('x', 'y'):
             var = d.variables.new()
@@ -360,7 +359,7 @@ class Create2DCameraRig(bpy.types.Operator):
         var.targets[0].id = camera_rig_object
         var.targets[0].bone_target = CAMERA_NAME
         var.targets[0].transform_type = 'LOC_Y'
-        var.targets[0].transform_space = 'LOCAL_SPACE'
+        var.targets[0].transform_space = 'TRANSFORM_SPACE'
 
         var = d.variables.new()
         var.name = 'lens'
