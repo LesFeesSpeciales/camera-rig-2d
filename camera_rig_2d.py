@@ -64,7 +64,7 @@ class Create2DCameraRig(bpy.types.Operator):
     bl_idname = "object.camera_rig_2d_create"
     bl_label = "Create 2D Camera Rig"
     bl_description = "Create a camera rig suiting 2D content"
-    bl_options = {"REGISTER"}
+    bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
     def poll(cls, context):
@@ -217,7 +217,6 @@ class Create2DCameraRig(bpy.types.Operator):
         pb[PARENT_NAME].rotation_mode = 'XYZ'
 
         pb[CAMERA_NAME].rotation_mode = 'XYZ'
-        pb[CAMERA_NAME].lock_location = (False, False, True)
         pb[CAMERA_NAME].lock_rotation = (True,) * 3
         pb[CAMERA_NAME].lock_scale = (True,) * 3
 
@@ -244,7 +243,7 @@ class Create2DCameraRig(bpy.types.Operator):
 
         # Focal length driver
         d = camera.driver_add('lens').driver
-        d.expression = 'abs({distance_z} - (left_z + right_z)/2) * 32 / frame_width'.format(distance_z=corner_distance_z)
+        d.expression = 'abs({distance_z} - (left_z + right_z)/2 + cam_z) * size / frame_width'.format(distance_z=corner_distance_z)
 
         var = d.variables.new()
         var.name = 'frame_width'
@@ -264,6 +263,21 @@ class Create2DCameraRig(bpy.types.Operator):
             var.targets[0].bone_target = corner.capitalize() + ' Corner'
             var.targets[0].transform_type = 'LOC_Z'
             var.targets[0].transform_space = 'TRANSFORM_SPACE'
+
+        var = d.variables.new()
+        var.name = 'cam_z'
+        var.type = 'TRANSFORMS'
+        var.targets[0].id = camera_rig_object
+        var.targets[0].bone_target = CAMERA_NAME
+        var.targets[0].transform_type = 'LOC_Z'
+        var.targets[0].transform_space = 'TRANSFORM_SPACE'
+
+        var = d.variables.new()
+        var.name = 'size'
+        var.type = 'SINGLE_PROP'
+        var.targets[0].id_type = 'CAMERA'
+        var.targets[0].id = camera
+        var.targets[0].data_path = 'sensor_width'
 
         # Orthographic scale driver
         d = camera.driver_add('ortho_scale').driver
