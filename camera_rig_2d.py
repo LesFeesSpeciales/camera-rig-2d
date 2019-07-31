@@ -20,7 +20,7 @@ bl_info = {
     "name": "2D Camera Rig",
     "author": "Les Fees Speciales",
     "version": (0, 0, 1),
-    "blender": (2, 79, 0),
+    "blender": (2, 80, 0),
     "location": "View3D > Add > Camera > 2D Camera Rig",
     "description": "Create a camera rig suiting 2D content",
     "category": "Camera"
@@ -60,7 +60,7 @@ def create_circle_shape(name):
     return obj
 
 
-class Create2DCameraRig(bpy.types.Operator):
+class OBJECT_OT_camera_rig_2d_create(bpy.types.Operator):
     bl_idname = "object.camera_rig_2d_create"
     bl_label = "Create 2D Camera Rig"
     bl_description = "Create a camera rig suiting 2D content"
@@ -85,15 +85,15 @@ class Create2DCameraRig(bpy.types.Operator):
         camera = bpy.data.cameras.new(CAMERA_NAME)
         camera.lens = 170.0
         camera_obj = bpy.data.objects.new(CAMERA_NAME, camera)
-        sc.objects.link(camera_obj)
+        sc.collection.objects.link(camera_obj)
 
         # Create armature
         camera_rig = bpy.data.armatures.new('Camera Rig')
         camera_rig_object = bpy.data.objects.new('Camera Rig', camera_rig)
-        sc.objects.link(camera_rig_object)
-        camera_rig_object.location = sc.cursor_location
+        sc.collection.objects.link(camera_rig_object)
+        camera_rig_object.location = sc.cursor.location
 
-        sc.objects.active = camera_rig_object
+        bpy.context.view_layer.objects.active = camera_rig_object
 
         bpy.ops.object.mode_set(mode='EDIT')
         eb = camera_rig.edit_bones
@@ -104,15 +104,15 @@ class Create2DCameraRig(bpy.types.Operator):
         camera_bone.tail = Vector((0.0, 0.0, BONE_LENGTH))
         camera_bone.parent = parent_bone
 
-        corners = camera.view_frame(sc)[1:3]
+        corners = camera.view_frame(scene=sc)[1:3]
 
         left_corner = eb.new(LEFT_CORNER_NAME)
-        left_corner.head = parent_bone.matrix * corners[1] * 100
+        left_corner.head = (parent_bone.matrix @ corners[1]).normalized() * 10
         left_corner.tail = left_corner.head + Vector((0.0, 0.0, BONE_LENGTH))
         left_corner.parent = parent_bone
 
         right_corner = eb.new(RIGHT_CORNER_NAME)
-        right_corner.head = parent_bone.matrix * corners[0] * 100
+        right_corner.head = (parent_bone.matrix @ corners[0]).normalized() * 10
         right_corner.tail = right_corner.head + Vector((0.0, 0.0, BONE_LENGTH))
         right_corner.parent = parent_bone
 
@@ -398,7 +398,7 @@ class Create2DCameraRig(bpy.types.Operator):
         camera_obj.lock_rotation = (True,) * 3
         camera_obj.lock_scale = (True,) * 3
 
-        bpy.ops.object.mode_set(mode=mode)
+        bpy.ops.object.mode_set(mode='OBJECT')
 
         return {"FINISHED"}
 
@@ -407,20 +407,20 @@ class Create2DCameraRig(bpy.types.Operator):
 def add_2d_rig_buttons(self, context):
     if context.mode == 'OBJECT':
         self.layout.operator(
-                    Create2DCameraRig.bl_idname,
-                    text="2D Camera Rig",
-                    icon='CAMERA_DATA'
-                    )
+            OBJECT_OT_camera_rig_2d_create.bl_idname,
+            text="2D Camera Rig",
+            icon='CAMERA_DATA'
+        )
 
 
 def register():
-    bpy.utils.register_module(__name__)
-    bpy.types.INFO_MT_camera_add.append(add_2d_rig_buttons)
+    bpy.utils.register_class(OBJECT_OT_camera_rig_2d_create)
+    bpy.types.VIEW3D_MT_camera_add.append(add_2d_rig_buttons)
 
 
 def unregister():
-    bpy.utils.unregister_module(__name__)
-    bpy.types.INFO_MT_camera_add.remove(add_2d_rig_buttons)
+    bpy.utils.unregister_class(OBJECT_OT_camera_rig_2d_create)
+    bpy.types.VIEW3D_MT_camera_add.remove(add_2d_rig_buttons)
 
 
 if __name__ == "__main__":
