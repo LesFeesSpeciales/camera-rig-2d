@@ -15,6 +15,8 @@ are sideways from the camera.
 * Shift: this uses the *shift* property of the camera object. In perspective mode,
 this incurs another type of deformation at extreme angles.
 
+You may find an article explaining the add-on in further detail [here](http://lacuisine.tech/2018/07/19/2d-camera-rig/).
+
 ### Known issues
 * Rotation mode is unsupported for orthographic cameras.
 
