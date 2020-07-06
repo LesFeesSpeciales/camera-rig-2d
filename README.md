@@ -1,3 +1,8 @@
+## Deprecation
+This project is now [included with Blender](https://docs.blender.org/manual/en/latest/addons/camera/camera_rigs.html).
+
+-----
+
 # Camera Rig 2D
 Create a 2D camera rig well suited for cutout animation
 
